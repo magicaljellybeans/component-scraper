@@ -1,4 +1,23 @@
 #!/usr/bin/env python
+"""
+CLI Syntax: python component_scraper.py <csv file> <component class name>
+
+Script to compare <div> component heading sizes to previous "structural" 
+headings in the DOM.
+
+Outputs a csv file in the current working directory.
+Input CSV must have one column of URLs to scrape with the header "url".
+Output CSV has a column of URLs and titles of component headings that 
+triggered the condition.
+
+Previous "structural" headings are defined as children of a <section>
+or element with class "block-richtext" that occur sequentially before the 
+given component heading.
+
+Current condition is a component heading being larger than the previous 
+"structural" heading.
+
+"""
 import requests
 import csv
 import re
@@ -11,6 +30,7 @@ heading_tags = re.compile("^h[1-6]$")
 
 
 def get_from_csv(file):
+    """Extract URLs to be scraped and add to a list."""
     with open(file, mode="r") as csv_file:
 
         url_list = []
@@ -24,7 +44,7 @@ def get_from_csv(file):
 
 
 def look_for_issues(url_list, component_type):
-
+    """Add URLs and component headings that meet the condition to a dict."""
     issue_dict = {}
     len_list = len(url_list)
     bad_urls = []
@@ -59,7 +79,7 @@ def look_for_issues(url_list, component_type):
 
             previous_heading_size = previous_heading.name[1]
 
-            if component_heading_size <= previous_heading_size:
+            if component_heading_size < previous_heading_size:
                 title = component_heading.text.strip()
 
                 print(f"    Incorrect sizing on {title}")
@@ -78,15 +98,18 @@ def look_for_issues(url_list, component_type):
 
 
 def find_previous_structural_heading(heading):
+    """Return the next previous heading when it meets a condition"""
     if heading is None:
         return None
-    if heading.parent.name == "section" or "block-richtext" in heading.parent["class"]:
+    if heading.parent.name == "section" \
+            or "block-richtext" in heading.parent["class"]:
         return heading
 
     find_previous_structural_heading(heading.find_previous(heading_tags))
 
 
 def write_to_csv(input):
+    """Write URLs and component headings to a CSV."""
     issue_dict, component = input
 
     with open(f"{component}_issue-list.csv", mode="w") as new_file:
