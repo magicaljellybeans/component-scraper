@@ -36,10 +36,10 @@ def read_urls_from_file(file):
                 yield line.replace("/nhsuk", "https://www.nhs.uk").strip()
 
 
-def look_for_issues(file, component_type):
-    """Compend dict of faulty headers and urls they occur on"""
-    faulty_headers = {}
+def look_for_headers(file, component):
+    """Check page for headers meeting condition"""
     bad_urls = []
+    counter = 0
 
     for index, url in enumerate(read_urls_from_file(file)):
         try:
@@ -51,7 +51,7 @@ def look_for_issues(file, component_type):
 
         print(f"Scraping page {index + 1} ... {url}")
 
-        components = soup.find_all("div", class_=f"{component_type}")
+        components = soup.find_all("div", class_=f"{component}")
 
         for target_component in components:
             target_component_heading = target_component.find(heading_tags)
@@ -72,20 +72,14 @@ def look_for_issues(file, component_type):
 
             if target_heading_size < prior_heading_size:
                 title = target_component_heading.text.strip()
-
+                counter += 1
                 print(f"    Incorrect sizing on {title}")
-
-                if url in faulty_headers:
-                    faulty_headers[url].append(title)
-                else:
-                    faulty_headers[url] = [title]
+                yield url, title
 
     for url in bad_urls:
         print(f"Bad URL: {url}")
 
-    print(f"Pages with issues: {len(faulty_headers.keys())}")
-
-    return faulty_headers
+    print(f"Pages with issues: {counter}")
 
 
 def find_prior_structural_heading(heading):
@@ -103,18 +97,16 @@ def find_prior_structural_heading(heading):
     find_prior_structural_heading(heading.find_previous(heading_tags))
 
 
-def write_to_csv(faulty_headers, component):
+def write_to_csv(file, component):
     with open(f"{component}_issue-list.csv", mode="w") as new_file:
         writer = csv.writer(new_file, delimiter=",")
 
-        for url in faulty_headers:
-            for header in faulty_headers[url]:
-                writer.writerow([url, header])
+        for url, header in look_for_headers(file, component):
+            writer.writerow([url, header])
 
 
 if __name__ == "__main__":
     file = sys.argv[1]
     component = sys.argv[2]
 
-    faulty_headers = look_for_issues(file, component)
-    write_to_csv(faulty_headers, component)
+    write_to_csv(file, component)
