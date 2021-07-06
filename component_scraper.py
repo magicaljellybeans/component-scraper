@@ -96,11 +96,10 @@ def look_for_issues(url_list, component_type):
 def find_prior_structural_heading(heading):
     if heading is None:
         return None
+    if heading.parent.name == "section":
+        return heading
     try:
-        if (
-            heading.parent.name == "section"
-            or "block-richtext" in heading.parent["class"]
-        ):
+        if "block-richtext" in heading.parent["class"]:
             return heading
     except KeyError:
         # Some tags don't have the "class" attr and can throw KeyError
