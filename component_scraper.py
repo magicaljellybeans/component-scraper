@@ -31,22 +31,17 @@ heading_tags = re.compile("^h[1-6]$")
 
 def read_urls_from_file(file):
     with open(file, mode="r") as file:
-        url_list = []
-
-        for line in file.readlines():
+        for line in file:
             if "/nhsuk/" in line:
-                url = line.replace("/nhsuk", "https://www.nhs.uk").strip()
-                url_list.append(url)
-
-    return url_list
+                yield line.replace("/nhsuk", "https://www.nhs.uk").strip()
 
 
-def look_for_issues(url_list, component_type):
+def look_for_issues(file, component_type):
     """Compend dict of faulty headers and urls they occur on"""
     faulty_headers = {}
     bad_urls = []
 
-    for index, url in enumerate(url_list):
+    for index, url in enumerate(read_urls_from_file(file)):
         try:
             html = requests.get(url).text
         except requests.exceptions.RequestException:
@@ -54,7 +49,7 @@ def look_for_issues(url_list, component_type):
 
         soup = BeautifulSoup(html, "html.parser")
 
-        print(f"Scraping page {index + 1} of {len(url_list)} ... {url}")
+        print(f"Scraping page {index + 1} ... {url}")
 
         components = soup.find_all("div", class_=f"{component_type}")
 
@@ -121,6 +116,5 @@ if __name__ == "__main__":
     file = sys.argv[1]
     component = sys.argv[2]
 
-    url_list = read_urls_from_file(file)
-    faulty_headers = look_for_issues(url_list, component)
+    faulty_headers = look_for_issues(file, component)
     write_to_csv(faulty_headers, component)
